@@ -1,5 +1,148 @@
 <?php
-require __DIR__.'/includes/bootstrap.php';
-if($_SERVER['REQUEST_METHOD']==='POST'){verify_csrf();$action=$_POST['action']??'';$id=(int)($_POST['id']??0);if($action==='remove'){unset($_SESSION['cart'][$id]);flash('Peça removida da sacola.');}elseif($action==='update'){foreach($_SESSION['cart'] as $key=>$old){$qty=max(0,(int)($_POST['qty'][$key]??0));$st=db()->prepare('SELECT stock FROM products WHERE id=? AND active=1');$st->execute([$key]);$stock=(int)$st->fetchColumn();if($qty<1||$stock<1)unset($_SESSION['cart'][$key]);else $_SESSION['cart'][$key]=min($qty,$stock);}flash('Sua sacola foi atualizada.');}redirect(app_url('carrinho.php'));}
-$items=cart_items();$total=array_sum(array_column($items,'subtotal'));$pageTitle='Sua sacola — ÉdoLeo';include __DIR__.'/includes/header.php';?>
-<main class="wrap page-shell"><span class="eyebrow">SUA SELEÇÃO</span><h1 class="page-title">A sua sacola.</h1><p class="page-lead">Peças especiais, prontas para ganhar uma nova história.</p><?php if(!$items):?><div class="empty-state"><svg aria-hidden="true" viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 8H6"/><circle cx="10" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg><h3>Sua sacola está à espera.</h3><p>Descubra uma peça que tenha a sua cara.</p><a href="<?=e(app_url('index.php#colecao'))?>">Explorar a curadoria ↗</a></div><?php else:?><div class="cart-layout"><div class="table-wrap"><form method="post"><?=csrf_field()?><input type="hidden" name="action" value="update"><table class="table"><thead><tr><th>PEÇA</th><th>PREÇO</th><th>QTD.</th><th>SUBTOTAL</th><th></th></tr></thead><tbody><?php foreach($items as $it):?><tr><td><div class="cart-product"><img src="<?=e($it['image'])?>" alt=""><div><a href="<?=e(app_url('produto.php?id='.(int)$it['id']))?>"><?=e($it['name'])?></a><small><?=e($it['brand'])?></small></div></div></td><td><?=money($it['price'])?></td><td><input class="form-control" style="width:70px" name="qty[<?=(int)$it['id']?>]" type="number" min="0" max="<?=(int)$it['stock']?>" value="<?=(int)$it['quantity']?>"></td><td><?=money($it['subtotal'])?></td><td><button class="text-button" form="remove-<?=(int)$it['id']?>">Remover</button></td></tr><?php endforeach;?></tbody></table><button class="text-button">Atualizar quantidades</button></form><?php foreach($items as $it):?><form id="remove-<?=(int)$it['id']?>" method="post" class="d-none"><?=csrf_field()?><input name="action" value="remove"><input name="id" value="<?=(int)$it['id']?>"></form><?php endforeach;?></div><aside class="summary-card"><h3>Resumo da sacola</h3><div class="summary-line"><span>Subtotal</span><span><?=money($total)?></span></div><div class="summary-line"><span>Frete</span><span>Calculado no envio</span></div><div class="summary-line total"><span>Total</span><span><?=money($total)?></span></div><a href="<?=e(app_url('checkout.php'))?>" class="button button-dark">Continuar para pagamento <span>↗</span></a><a href="<?=e(app_url('index.php#colecao'))?>" class="text-link d-inline-block mt-4">Continuar explorando</a></aside></div><?php endif;?></main><?php include __DIR__.'/includes/footer.php';?>
+
+require __DIR__ . '/includes/bootstrap.php';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    verify_csrf();
+
+    $action = $_POST['action'] ?? '';
+    $id     = (int) ($_POST['id'] ?? 0);
+
+    if ($action === 'remove') {
+        unset($_SESSION['cart'][$id]);
+        flash('Peça removida da sacola.');
+
+    } elseif ($action === 'update') {
+        foreach ($_SESSION['cart'] as $key => $old) {
+            $qty = max(0, (int) ($_POST['qty'][$key] ?? 0));
+            $st  = db()->prepare('SELECT stock FROM products WHERE id=? AND active=1');
+            $st->execute([$key]);
+            $stock = (int) $st->fetchColumn();
+
+            if ($qty < 1 || $stock < 1) {
+                unset($_SESSION['cart'][$key]);
+            } else {
+                $_SESSION['cart'][$key] = min($qty, $stock);
+            }
+        }
+        flash('Sua sacola foi atualizada.');
+    }
+
+    redirect(app_url('carrinho.php'));
+}
+
+$items     = cart_items();
+$total     = array_sum(array_column($items, 'subtotal'));
+$pageTitle = 'Sua sacola — ÉdoLeo';
+include __DIR__ . '/includes/header.php';
+?>
+
+<main class="wrap page-shell">
+
+    <span class="eyebrow">SUA SELEÇÃO</span>
+    <h1 class="page-title">A sua sacola.</h1>
+    <p class="page-lead">Peças especiais, prontas para ganhar uma nova história.</p>
+
+    <?php if (!$items): ?>
+
+        <div class="empty-state">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 4h2l2.2 11.2a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L21 8H6"/>
+                <circle cx="10" cy="20" r="1"/>
+                <circle cx="18" cy="20" r="1"/>
+            </svg>
+            <h3>Sua sacola está à espera.</h3>
+            <p>Descubra uma peça que tenha a sua cara.</p>
+            <a href="<?= e(app_url('index.php#colecao')) ?>">Explorar a curadoria ↗</a>
+        </div>
+
+    <?php else: ?>
+
+        <div class="cart-layout">
+
+            <div class="table-wrap">
+                <form method="post">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="update">
+
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>PEÇA</th>
+                                <th>PREÇO</th>
+                                <th>QTD.</th>
+                                <th>SUBTOTAL</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($items as $it): ?>
+                                <tr>
+                                    <td>
+                                        <div class="cart-product">
+                                            <img src="<?= e($it['image']) ?>" alt="">
+                                            <div>
+                                                <a href="<?= e(app_url('produto.php?id=' . (int) $it['id'])) ?>"><?= e($it['name']) ?></a>
+                                                <small><?= e($it['brand']) ?></small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td><?= money($it['price']) ?></td>
+                                    <td>
+                                        <input class="form-control" style="width:70px"
+                                            name="qty[<?= (int) $it['id'] ?>]"
+                                            type="number"
+                                            min="0"
+                                            max="<?= (int) $it['stock'] ?>"
+                                            value="<?= (int) $it['quantity'] ?>">
+                                    </td>
+                                    <td><?= money($it['subtotal']) ?></td>
+                                    <td>
+                                        <button class="text-button" form="remove-<?= (int) $it['id'] ?>">Remover</button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+
+                    <button class="text-button">Atualizar quantidades</button>
+                </form>
+
+                <?php foreach ($items as $it): ?>
+                    <form id="remove-<?= (int) $it['id'] ?>" method="post" class="d-none">
+                        <?= csrf_field() ?>
+                        <input name="action" value="remove">
+                        <input name="id" value="<?= (int) $it['id'] ?>">
+                    </form>
+                <?php endforeach; ?>
+            </div>
+
+            <aside class="summary-card">
+                <h3>Resumo da sacola</h3>
+
+                <div class="summary-line">
+                    <span>Subtotal</span>
+                    <span><?= money($total) ?></span>
+                </div>
+                <div class="summary-line">
+                    <span>Frete</span>
+                    <span>Calculado no envio</span>
+                </div>
+                <div class="summary-line total">
+                    <span>Total</span>
+                    <span><?= money($total) ?></span>
+                </div>
+
+                <a href="<?= e(app_url('checkout.php')) ?>" class="button button-dark">
+                    Continuar para pagamento <span>↗</span>
+                </a>
+                <a href="<?= e(app_url('index.php#colecao')) ?>" class="text-link d-inline-block mt-4">Continuar explorando</a>
+            </aside>
+
+        </div>
+
+    <?php endif; ?>
+
+</main>
+
+<?php include __DIR__ . '/includes/footer.php'; ?>
